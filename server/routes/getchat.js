@@ -72,7 +72,7 @@ export default function getChat(app, req, res) {
                         if (Array.isArray(msgs)) {
                             sent = true; // make sure we only send once
 
-                            // Build response in legacy format
+                            // Build response in the ready format
                             const response = {
                                 chats: msgs.length,
                                 yourUsername: sessionUser,
@@ -82,11 +82,14 @@ export default function getChat(app, req, res) {
                             msgs.forEach((entry, idx) => {
                                 let sender, text;
 
-                                // Legacy string → assume alternating
+                                // Legacy string, which means we have to assume alternating sadly because of my old code
                                 if (typeof entry === 'string') {
+                                    // Sender is either giver or reciever. We don't know!
                                     sender = idx % 2 === 0 ? sessionUser : targetUser;
                                     text = entry;
                                 } else {
+                                    // It isn't alternating, we can just set it to the sender.
+                                    // Safely otherwise, unknown
                                     sender = entry.sender ?? '(unknown)';
                                     text = entry.text;
                                 }
