@@ -16,8 +16,7 @@
     - GET /signout: Signs the user out
     - GET /get: Gets the user data
     - GET /getchat: Gets a specific chat
-    - GET /text: Sends a text message
-    - GET /getallchats: Gets all chats for the user
+    - GET /createchat: Creates a new chat
 */
 
 // Declare imports
@@ -26,13 +25,9 @@ import signInRoute from './routes/signin.js';
 import signOutRoute from './routes/signout.js';
 import getUser from './routes/get.js';
 import getChat from './routes/getchat.js';
-import text from './routes/text.js';
-import getAllChats from './routes/getallchats.js';
 import createChat from './routes/createchat.js';
-import createArticle from './routes/createarticle.js';
-import deleteArticle from './routes/deletearticle.js';
-import getAllArticles from './routes/getallarticles.js';
-import getTranslatedArticle from './routes/gettranslatedarticle.js';
+import pushMessage from './routes/pushMessage.js';
+import getOnline from './routes/getonline.js';
 
 export function setupRoutes(app) {
 
@@ -43,19 +38,15 @@ export function setupRoutes(app) {
   });
 
 
-  app.get('/',       (req, res) => res.status(200).send('API is WORKING!'));
+  app.get('/', (req, res) => res.status(200).send('API is WORKING!'));
   app.get('/signup', (req, res) => singUpRoute(app, req, res));
   app.get('/signin', (req, res) => signInRoute(app, req, res));
-  app.get('/signout',(req, res) => signOutRoute(app, req, res));
-  app.get('/getinfo',(req, res) => getUser(app, req, res));
-  app.get('/getchat',(req, res) => getChat(app, req, res));
-  app.get('/text',   (req, res) => text(app, req, res));
+  app.get('/signout', (req, res) => signOutRoute(app, req, res));
+  app.get('/getinfo', (req, res) => getUser(app, req, res));
+  app.get('/getonline', (req, res) => getOnline(app, req, res));
+  app.get('/pushMessage', (req, res) => pushMessage(app, req, res));
+  app.get('/getchat', (req, res) => getChat(app, req, res));
 
-  app.get('/getallchats',        (req, res) => getAllChats(app, req, res));
-  app.get('/createchat',         (req, res) => createChat(app, req, res));
+  app.get('/createchat', (req, res) => createChat(app, req, res));
 
-  app.get('/createarticle',      (req, res) => createArticle(app, req, res));
-  app.get('/deletearticle',      (req, res) => deleteArticle(app, req, res));
-  app.get('/getallarticles',     (req, res) => getAllArticles(app, req, res));
-  app.get('/gettranslatedarticle',(req, res) => getTranslatedArticle(app, req, res));
 }

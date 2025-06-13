@@ -11,13 +11,6 @@
 import sqlite3 from 'sqlite3';
 import fs from 'fs';
 
-/**
- * # Database
- * @class Database
- * @description This class is responsible for managing the database connection and operations.
- * It provides methods to initialize the database, get the connection, and initialize tables.
- * @author Bashar Zain
- */
 export class Database {
 
     // Private fields to store the database name, path, and connection.
@@ -135,18 +128,6 @@ export class Database {
             }
         });
 
-        this.#db.run(`CREATE TABLE IF NOT EXISTS articles (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            contents TEXT UNIQUE NOT NULL,
-            language TEXT NOT NULL,
-            author TEXT NOT NULL
-        )`, (err) => {
-            if (err) {
-                console.error('Error creating articles table:', err.message);
-            } else {
-                console.log('Articles table created or already exists.');
-            }
-        });
 
         // Do a chat table, probably save ID then a JSON.
         this.#db.run(`CREATE TABLE IF NOT EXISTS chats (

@@ -1,31 +1,24 @@
 /**
- * Create a brand‑new chat and attach it to the signed‑in user.
- * Required query params: id (session token)
- * Optional: first (JSON‑encoded first message object – same schema as /text)
+ * Create a brand‑new chat and attach it to the signed‑in user and optional target.
+ * 
+ * @author Bashar Zain
+ * @param {Express App} app The application instance
+ * @param {*} req The request object
+ * @param {*} res The response object
+ * @return {void}
  */
 export default function createChat(app, req, res) {
-  const { id, first } = req.query;
+  const { id, first, target } = req.query;
 
   if (!id) return res.status(400).send('Session id is required');
 
-  // map session → username
+  // map session -> username
   const user = Object.keys(app.keys).find(k => app.keys[k] === id);
   if (!user) return res.status(404).send('Invalid session');
 
   // prepare initial contents array
-  let contents = [];
-  if (first) {
-    try {
-      const msg = JSON.parse(first);
-      if (!msg.content || !msg.timestamp || !msg.sender)
-        return res.status(400).send('First message has invalid schema');
-      contents.push(msg);
-    } catch {
-      return res.status(400).send('Unable to parse first message JSON');
-    }
-  }
+  const contents = first ? [first] : [];
 
-  // 1️⃣ insert new row in chats
   app.database.run(
     'INSERT INTO chats (contents) VALUES (?)',
     [JSON.stringify(contents)],
@@ -34,32 +27,72 @@ export default function createChat(app, req, res) {
         console.error(err.message);
         return res.status(500).send('Failed to create chat');
       }
+
       const chatId = this.lastID;
 
-      // 2️⃣ append chat id to user’s chat list
-      app.database.get(
-        'SELECT chats FROM users WHERE username = ?',
-        [user],
-        (e, row) => {
-          if (e) {
-            console.error(e.message);
-            return res.status(500).send('Failed to update user chats');
-          }
-          const list = row?.chats ? JSON.parse(row.chats) : [];
-          list.push(chatId);
-          app.database.run(
-            'UPDATE users SET chats = ? WHERE username = ?',
-            [JSON.stringify(list), user],
-            uErr => {
-              if (uErr) {
-                console.error(uErr.message);
-                return res.status(500).send('Failed to link chat to user');
-              }
-              res.status(201).json({ chatId, messages: contents });
+      const linkToUser = (username, cb) => {
+        app.database.get(
+          'SELECT chats FROM users WHERE username = ?',
+          [username],
+          (e, row) => {
+            if (e) {
+              console.error(`Failed to fetch chats for ${username}:`, e.message);
+              return cb(e);
             }
-          );
+            const list = parseChats(row?.chats);
+            list.push(chatId);
+            app.database.run(
+              'UPDATE users SET chats = ? WHERE username = ?',
+              [JSON.stringify(list), username],
+              uErr => {
+                if (uErr) {
+                  console.error(`Failed to update chats for ${username}:`, uErr.message);
+                  return cb(uErr);
+                }
+                cb(null);
+              }
+            );
+          }
+        );
+      };
+
+      // Link to the signed-in user
+      linkToUser(user, err1 => {
+        if (err1) return res.status(500).send('Failed to link chat to user');
+
+        // Optionally link to the target user
+        if (target) {
+          linkToUser(target, err2 => {
+            if (err2) return res.status(500).send('Failed to link chat to target user');
+            res.status(201).json({ chatId, messages: contents });
+          });
+        } else {
+          res.status(201).json({ chatId, messages: contents });
         }
-      );
+      });
     }
   );
 }
+
+/**
+ * Parse the chats in a readable manner.
+ * 
+ * @author Bashar Zain
+ * @param raw The thing you're parsing.
+ * @return The parsed result.
+ */
+const parseChats = raw => {
+  if (!raw || raw === 'null') return [];
+
+  try {
+    // Try easily parsing it with JSON.parse()
+    const parsed = JSON.parse(raw);
+    
+    // Return if it's an array, then we'll return it, else return nothing. Good null/undefined handling.
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return raw.split(',')
+              .map(s => s.trim())
+              .filter(Boolean);
+  }
+};
